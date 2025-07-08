@@ -113,32 +113,43 @@ class Buffer {
         notifyAll(); // <ADICIONADO>
     }
 
-    public synchronized int remove(boolean consumeEven) { // <EDITADO>
+public synchronized int remove(boolean consumeEven) {
+    while (true) {
         while (data.isEmpty()) {
             try {
-                wait(); // <ADICIONADO>
+                wait();
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
+                return -1;
             }
         }
 
-        int attempts = 0;
-        while (attempts++ < data.size()) {
+        int attempts = data.size(); // Evita loop infinito
+        for (int i = 0; i < attempts; i++) {
             int item = data.remove();
             boolean isEven = item % 2 == 0;
             if ((consumeEven && isEven) || (!consumeEven && !isEven)) {
                 System.out.println("Removed: " + item + " | Buffer size: " + data.size());
-                notifyAll(); // <ADICIONADO>
+                notifyAll();
                 return item;
             } else {
-                data.add(item); // <ADICIONADO>
+                data.add(item);
             }
         }
 
-        // Não encontrou item que satisfaz — tenta novamente depois
-        return -1; // <ADICIONADO>
+        // Nenhum item válido no momento, espera
+        try {
+            wait();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            return -1;
+        }
     }
 }
+
+
+
+   
 
 
 
