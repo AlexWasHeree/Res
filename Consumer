@@ -93,6 +93,7 @@ class Consumer implements Runnable { // <EDITADO>
     }
 }
 
+
 import java.util.LinkedList; // <EDITADO>
 import java.util.Queue; // <EDITADO>
 
@@ -100,12 +101,12 @@ class Buffer {
     private final Queue<Integer> data = new LinkedList<>(); // <EDITADO>
     private final int MAX_SIZE = 100; // <ADICIONADO>
 
-    public synchronized void put(int value) { // <EDITADO>
+    public synchronized void put(int value) {
         while (data.size() >= MAX_SIZE) { // <ADICIONADO>
             try {
                 wait(); // <ADICIONADO>
             } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
+                Thread.currentThread().interrupt(); // <ADICIONADO>
             }
         }
         data.add(value);
@@ -113,39 +114,43 @@ class Buffer {
         notifyAll(); // <ADICIONADO>
     }
 
-public synchronized int remove(boolean consumeEven) {
-    while (true) {
-        while (data.isEmpty()) {
+    public synchronized int remove(boolean consumeEven) { // <EDITADO>
+        while (true) { // <EDITADO>
+            while (data.isEmpty()) {
+                try {
+                    wait(); // <ADICIONADO>
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt(); // <ADICIONADO>
+                    return -1;
+                }
+            }
+
+            int size = data.size(); // <ADICIONADO>
+            for (int i = 0; i < size; i++) { // <ADICIONADO>
+                int item = data.remove(); // <EDITADO>
+                boolean isEven = item % 2 == 0; // <ADICIONADO>
+                if ((consumeEven && isEven) || (!consumeEven && !isEven)) {
+                    System.out.println("Removed: " + item + " | Buffer size: " + data.size());
+                    notifyAll(); // <ADICIONADO>
+                    return item;
+                } else {
+                    data.add(item); // <ADICIONADO>
+                }
+            }
+
+            // Nenhum item do buffer atende à condição -> aguarda novos
             try {
-                wait();
+                wait(); // <ADICIONADO>
             } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
+                Thread.currentThread().interrupt(); // <ADICIONADO>
                 return -1;
             }
         }
-
-        int attempts = data.size(); // Evita loop infinito
-        for (int i = 0; i < attempts; i++) {
-            int item = data.remove();
-            boolean isEven = item % 2 == 0;
-            if ((consumeEven && isEven) || (!consumeEven && !isEven)) {
-                System.out.println("Removed: " + item + " | Buffer size: " + data.size());
-                notifyAll();
-                return item;
-            } else {
-                data.add(item);
-            }
-        }
-
-        // Nenhum item válido no momento, espera
-        try {
-            wait();
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            return -1;
-        }
     }
 }
+
+
+
 
 
 
